@@ -1,94 +1,106 @@
-import java.util.ArrayList;
-import java.util.InputMismatchException;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class GausMethod {
     private double[][] matrix;
+
     private int iteration = 0;
+
+    //хранит индексы строк + 1, в которых есть 1, на каждой итерации (по 1ому индексу строки на каждой итерации)
     private int[] columnWithOne;
+
     private int line;
+
     private int column;
-    private List<Integer> indexNullString = new ArrayList();
+
+    //хранит индексы нулевых строк для последующего удаления из матрицы
+    private List<Integer> indexNullString = new ArrayList<>();
+
+    //хранит количество удаленных строк из матрицы
     private int countDeletedNullString;
 
     public GausMethod(int n) {
         try {
-            if (n >= 16 || n <= 2) {
+            if (n < 16 && n > 2) {
+                this.line = n;
+                this.column = n+1;
+                matrix = new double[line][column];
+            } else {
                 throw new IllegalArgumentException();
             }
-
-            this.line = n;
-            this.column = n + 1;
-            this.matrix = new double[this.line][this.column];
-        } catch (IllegalArgumentException var3) {
+        } catch (IllegalArgumentException e) {
             System.out.println("Минимальная размерность матрицы 2x3 / Максимальная размерность матрицы 14x15");
         }
-
     }
 
+    //ввод матрицы
     public void enterMatrix() {
-        this.columnWithOne = new int[this.line];
-        Scanner scanner = new Scanner(System.in);
+        //для работы по итерациям
+        columnWithOne = new int[line];
 
-        while(true) {
+        Scanner scanner = new Scanner(System.in);
+        double el;
+
+        while (true){
             try {
-                for(int i = 0; i < this.line; ++i) {
-                    for(int j = 0; j < this.column; ++j) {
+                for (int i = 0; i < line; i++) {
+                    for (int j = 0; j < column; j++) {
                         System.out.printf("Введите элемент [%d] [%d]", i + 1, j + 1);
-                        double el = scanner.nextDouble();
-                        this.matrix[i][j] = el;
+                        el = scanner.nextDouble();
+                        matrix[i][j] = el;
                     }
                 }
-
-                return;
-            } catch (InputMismatchException var6) {
+                break;
+            } catch (InputMismatchException e) {
                 System.out.println("Неверный формат данных");
                 scanner.nextLine();
             }
         }
     }
 
+    //вывод матрицы
     public void printMatrix() {
-        for(int i = 0; i < this.line; ++i) {
-            for(int j = 0; j < this.column; ++j) {
-                System.out.printf("%f   ", this.matrix[i][j]);
+        for (int i = 0; i < line; i++) {
+            for (int j = 0; j < column; j++) {
+                System.out.printf("%f   ", matrix[i][j]);
             }
-
             System.out.println();
         }
-
         System.out.println();
     }
 
+    //метод, который делает единичную матрицу (если были удалены строки, то остаются числа)
     public void makeIdentityMatrix() {
-        for(int i = this.line - 1; i > 0; --i) {
-            for(int k = 1; k < i + 1; ++k) {
-                double temp = -this.matrix[i - k][this.column - 1 - this.countDeletedNullString - (this.line - i)];
+        double temp;
 
-                for(int j = 0; j < this.column; ++j) {
-                    double[] var10000 = this.matrix[i - k];
-                    var10000[j] += this.matrix[i][j] * temp;
+        for (int i = line - 1; i > 0; i--) {
+            //делаем 0, на нужных столбцах (над единицей)
+            for (int k = 1; k < i + 1; k++) {
+
+                //число, которое равно 0
+                temp = -matrix[i - k][column - 1 - countDeletedNullString - (line - i)];
+
+                for (int j = 0; j < column; j++) {
+                    matrix[i - k][j] += (matrix[i][j] * temp);
                 }
             }
         }
-
     }
 
+    //проверяет следующие нулевые строки (после итерации)
     public boolean checkFollowingLineOnNull() {
         int countNull = 0;
         boolean flag = false;
 
-        for(int i = this.iteration + 1; i < this.line; ++i) {
-            for(int j = 0; j < this.column - 1; ++j) {
-                if (this.matrix[i][j] == 0.0) {
-                    ++countNull;
-                }
+        for (int i = iteration + 1; i < line; i++) {
+            for (int j = 0; j < column - 1; j++) {
+                if (matrix[i][j] == 0)
+                    countNull++;
             }
-
-            if (countNull == this.column - 1) {
-                this.indexNullString.add(i);
-                ++this.countDeletedNullString;
+            if (countNull == column - 1) {
+                indexNullString.add(i);
+                countDeletedNullString++;
                 flag = true;
             }
 
@@ -98,74 +110,82 @@ public class GausMethod {
         return flag;
     }
 
+    //удаление нулевых строк из массива
     public void deleteNullString() {
-        this.line -= this.indexNullString.size();
+        line -= indexNullString.size();
         boolean flag = true;
-        int k = 0;
-        double[][] newMatrix = new double[this.line][this.column];
+        int k = 0;// для нового массива
 
-        for(int i = 0; i < this.line + this.indexNullString.size(); ++i) {
-            int j;
-            for(j = 0; j < this.indexNullString.size(); ++j) {
-                if (i == (Integer)this.indexNullString.get(j)) {
+        double[][] newMatrix = new double[line][column];
+
+        for (int i = 0; i < line + indexNullString.size(); i++) {
+
+            // проверка наличия нулевых строк
+            for (int o = 0; o < indexNullString.size(); o++) {
+                if (i == indexNullString.get(o)) {
                     flag = false;
                     break;
-                }
-
-                flag = true;
+                } else
+                    flag = true;
             }
 
             if (flag) {
-                for(j = 0; j < this.column; ++j) {
-                    newMatrix[k][j] = this.matrix[i][j];
+                for (int j = 0; j < column; j++) {
+                    newMatrix[k][j] = matrix[i][j];
                 }
 
-                ++k;
+                k++;
             }
         }
 
-        this.matrix = newMatrix;
-        this.indexNullString.clear();
+        //меняем матрицу
+        matrix = newMatrix;
+
+        //очищаем список для следующих возможных изменений
+        indexNullString.clear();
     }
 
+    // выбирает самую 1ую (по порядку) строку, где 1ый элемент не равен 0 и делит на него все элементы в строке для получения 1 в нужном столбце
     public void makeHardDivision() {
-        double temp = this.matrix[this.iteration][this.iteration];
+        //переменная для деления на одно и то же число
+        double temp = matrix[iteration][iteration];
 
-        for(int j = 0; j < this.column; ++j) {
-            double[] var10000 = this.matrix[this.iteration];
-            var10000[j] /= temp;
-            if (this.matrix[this.iteration][j] == 0.0) {
-                this.matrix[this.iteration][j] = 0.0;
-            }
+        for (int j = 0; j < column; j++) {
+            matrix[iteration][j] /= temp;
+
+            //глупая проверка, но при делении 0 на отрицательное число получается -0 :)
+            if(matrix[iteration][j]==-0)
+                matrix[iteration][j]=0;
         }
-
     }
 
+    //поделить нацело элементы строки на текущей итерации для получения 1 на нужном элементе матрицы(в нужном столбце)
     public boolean makeCompleteDivision() {
+        //для проверки деления нацело
         boolean flag = true;
+        //для деления
+        double temp;
 
-        for(int i = this.iteration; i < this.line; ++i) {
-            int j;
-            for(j = this.iteration; j < this.column; ++j) {
-                if (this.matrix[i][j] % this.matrix[i][this.iteration] != 0.0) {
+        for (int i = iteration; i < line; i++) {
+            for (int j = iteration; j < column; j++) {
+                //делится ли число на нужный элемент нацело и есть ли на этой строке 1 из предыдущих итераций
+                if (matrix[i][j] % matrix[i][iteration] != 0) {
                     flag = false;
                     break;
-                }
-
-                flag = true;
+                } else
+                    flag = true;
             }
 
             if (flag) {
-                double temp = this.matrix[i][this.iteration];
+                temp = matrix[i][iteration];
 
-                for(j = this.iteration; j < this.column; ++j) {
-                    double[] var10000 = this.matrix[i];
-                    var10000[j] /= temp;
-                    if (this.matrix[i][j] == 0.0) {
-                        this.matrix[i][j] = 0.0;
-                    }
+                for (int j = iteration; j < column; j++) {
+                    matrix[i][j] /= temp;
+
+                    //глупая проверка, но при делении 0 на отрицательное число получается -0 :)
+                    if(matrix[i][j]==-0)
+                        matrix[i][j]=0;
                 }
-
                 return true;
             }
         }
@@ -173,74 +193,80 @@ public class GausMethod {
         return false;
     }
 
+    //делаем 0 в остальных столбцах, если есть 1 в какой-либо строке на месте текущей итерации
     public boolean makeSteppedView() {
-        if (this.columnWithOne[this.iteration] == 0) {
-            return false;
-        } else {
-            int indexLineWithOne = this.columnWithOne[this.iteration] - 1;
+        double temp;
+        if (columnWithOne[iteration] != 0) {
+            int indexLineWithOne = columnWithOne[iteration] - 1;
 
-            for(int i = this.iteration; i < this.line; ++i) {
-                if (i != indexLineWithOne) {
-                    double temp = -this.matrix[i][this.iteration];
+            for (int i = iteration; i < line; i++) {
 
-                    for(int j = 0; j < this.column; ++j) {
-                        double[] var10000 = this.matrix[i];
-                        var10000[j] += this.matrix[indexLineWithOne][j] * temp;
-                    }
+                //пропуск строки где стоит 1
+                if (i == indexLineWithOne)
+                    continue;
+
+                //число, которое станет 0 в строке
+                temp = -matrix[i][iteration];
+
+                for (int j = 0; j < column; j++) {
+                    matrix[i][j] += (matrix[indexLineWithOne][j] * temp);
                 }
             }
-
             return true;
-        }
+        } else
+            return false;
     }
 
+    //проверка на наличие 1 в заданном столбце
     public void checkCurrentColumnWithOne() {
-        for(int i = this.iteration; i < this.line; ++i) {
-            if (this.matrix[i][this.iteration] == 1.0) {
-                this.columnWithOne[this.iteration] = i + 1;
+        for (int i = iteration; i < line; i++) {
+            if (matrix[i][iteration] == 1) {
+                // на 1 больше для проверки условия
+                columnWithOne[iteration] = i + 1;
                 break;
             }
         }
-
     }
 
+    //проверка на соответствие ступенчитого вида столбца матрицы на определенной итерации
     public boolean checkSteppedViewColumn() {
         int countNullInColumn = 0;
 
-        for(int i = 0; i < this.line; ++i) {
-            if (this.matrix[i][this.iteration] == 0.0) {
-                ++countNullInColumn;
-            }
+        //проверка на 0 в столбце нужной итерации
+        for (int i = 0; i < line; i++) {
+            if (matrix[i][iteration] == 0)
+                countNullInColumn++;
         }
 
-        if (countNullInColumn == this.line - this.iteration - 1 && this.columnWithOne[this.iteration] != 0) {
+        //проверка на соответствие кол-ва 0 и наличия 1 в столбце
+        if (countNullInColumn == (line - iteration - 1) && columnWithOne[iteration] != 0) {
             return true;
-        } else {
+        } else
             return false;
-        }
     }
 
+    //приведение к ступенчатому виду матрицы
     public void makeSteppedViewMatrix() {
-        double[] temp = new double[this.column];
-        if (this.columnWithOne[this.iteration] - 1 != this.iteration) {
-            int i;
-            for(i = 0; i < this.column; ++i) {
-                temp[i] = this.matrix[this.iteration][i];
+        double[] temp = new double[column];
+
+        if (columnWithOne[iteration] - 1 != iteration) {
+
+            for (int i = 0; i < column; i++) {
+                temp[i] = matrix[iteration][i];
             }
 
-            for(i = 0; i < this.column; ++i) {
-                this.matrix[this.iteration][i] = this.matrix[this.columnWithOne[this.iteration] - 1][i];
+            for (int i = 0; i < column; i++) {
+                matrix[iteration][i] = matrix[columnWithOne[iteration] - 1][i];
             }
 
-            for(i = 0; i < this.column; ++i) {
-                this.matrix[this.columnWithOne[this.iteration] - 1][i] = temp[i];
+            for (int i = 0; i < column; i++) {
+                matrix[columnWithOne[iteration] - 1][i] = temp[i];
             }
         }
-
     }
 
     public int getIteration() {
-        return this.iteration;
+        return iteration;
     }
 
     public void setIteration(int iteration) {
@@ -248,10 +274,10 @@ public class GausMethod {
     }
 
     public int getLine() {
-        return this.line;
+        return line;
     }
 
     public int getColumn() {
-        return this.column;
+        return column;
     }
 }
